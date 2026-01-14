@@ -1,31 +1,12 @@
 <!-- Improved compatibility of back to top link: See: https://github.com/othneildrew/Best-README-Template/pull/73 -->
 <a id="readme-top"></a>
-<!--
-*** Thanks for checking out the Best-README-Template. If you have a suggestion
-*** that would make this better, please fork the repo and create a pull request
-*** or simply open an issue with the tag "enhancement".
-*** Don't forget to give the project a star!
-*** Thanks again! Now go create something AMAZING! :D
--->
-
-
-
-<!-- PROJECT SHIELDS -->
-<!--
-*** I'm using markdown "reference style" links for readability.
-*** Reference links are enclosed in brackets [ ] instead of parentheses ( ).
-*** See the bottom of this document for the declaration of the reference variables
-*** for contributors-url, forks-url, etc. This is an optional, concise syntax you may use.
-*** https://www.markdownguide.org/basic-syntax/#reference-style-links
--->
-
 
 
 <!-- PROJECT LOGO -->
 <br />
 <div align="center">
   <a href="https://github.com/kenwang92/mips_cpu">
-    <img src="images/logo.png" alt="Logo">
+    <img src="images/schematic.png" alt="Logo">
   </a>
 
 <h3 align="center">Single-Cycle MIPS processor with in verilog HDL</h3>
@@ -42,7 +23,20 @@
 <!-- ABOUT THE PROJECT -->
 ## About The Project
 
-此項目使用純verilog實現mips單週期cpu
+此項目使用純verilog實現mips單週期cpu，目前已實現指令如下
+
+| Instruction | ALUControl | TYPE |
+| :---------- | :--------: | ---: |
+| ADD         |   `0010`   |    R |
+| SUB         |   `0110`   |    R |
+| AND         |   `0000`   |    R |
+| OR          |   `0001`   |    R |
+| SLT         |   `0111`   |    R |
+| NOR         |   `1100`   |    R |
+| LW          |   `0010`   |    I |
+| SW          |   `0010`   |    I |
+| BEQ         |   `0110`   |    I |
+| J           |   `0000`   |    J |
 
 
 <!-- GETTING STARTED -->
@@ -69,13 +63,12 @@
     <li><a href="#acknowledgments">Acknowledgments</a></li>
   </ol>
 </details>
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
 
 ## Prerequisite Knowledge（仙貝知識）
 計算機組織、數位邏輯、verilog語法
 
 ## Usage
-將verilog輸入輸出模板複製到檔案中，並依照設計目標實現模塊功能
+將verilog輸入輸出模板複製到檔案中，並依照設計目標實現模塊功能，可參考<a href="#acknowledgments">學習資源</a>
 
 ## Top
 Top 模塊是整個 MIPS 單週期處理器的頂層整合單元。它的主要職責是實例化（Instantiate）所有子模塊（如 PC、ALU、Control Unit、Memories 等），並定義它們之間的資料路徑（Datapath）與控制訊號連線。此模塊不處理具體運算，而是負責將「取指、解碼、執行、訪存、寫回」這五個階段的訊號串接起來，包括處理 Branch 與 Jump 的路徑選擇邏輯，確保資料能在正確的時脈週期內流動並完成指令執行。
