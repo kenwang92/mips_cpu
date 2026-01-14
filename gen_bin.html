@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>FPGA MIPS 指令列表與反組譯器</title>
+    <style>
+      body {
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+        max-width: 1200px;
+        margin: 20px auto;
+        padding: 20px;
+        background-color: #f8f9fa;
+      }
+      .container {
+        background: white;
+        padding: 20px;
+        border-radius: 8px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+      }
+      h1 {
+        color: #333;
+        text-align: center;
+        margin-bottom: 20px;
+      }
+
+      /* 生成器區塊 */
+      .generator-box {
+        background-color: #e9ecef;
+        padding: 15px;
+        border-radius: 6px;
+        margin-bottom: 20px;
+        border: 1px solid #dee2e6;
+      }
+      .control-group {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        align-items: center;
+        margin-bottom: 10px;
+      }
+      select,
+      input {
+        padding: 8px;
+        border: 1px solid #ced4da;
+        border-radius: 4px;
+      }
+      .btn-add {
+        background-color: #28a745;
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 4px;
+        cursor: pointer;
+        font-weight: bold;
+      }
+      .btn-add:hover {
+        background-color: #218838;
+      }
+
+      /* 表格樣式 */
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 10px;
+        font-size: 14px;
+      }
+      th,
+      td {
+        border: 1px solid #dee2e6;
+        padding: 8px;
+        text-align: center;
+      }
+      th {
+        background-color: #343a40;
+        color: white;
+      }
+      input.code-input {
+        width: 260px;
+        font-family: "Courier New", monospace;
+        letter-spacing: 1px;
+        text-align: center;
+        border: 1px solid #ccc;
+        background-color: #fff;
+      }
+      input.code-input:focus {
+        border-color: #80bdff;
+        outline: none;
+        box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+      }
+
+      .col-asm {
+        text-align: left;
+        font-weight: bold;
+        color: #0056b3;
+        width: 200px;
+      }
+      .col-field {
+        color: #666;
+        font-size: 0.9em;
+      }
+      .btn-del {
+        background-color: #dc3545;
+        color: white;
+        border: none;
+        padding: 4px 8px;
+        border-radius: 3px;
+        cursor: pointer;
+      }
+      .btn-del:hover {
+        background-color: #c82333;
+      }
+
+      /* 底部匯出區 */
+      .export-box {
+        margin-top: 30px;
+        border-top: 2px solid #eee;
+        padding-top: 20px;
+      }
+      textarea {
+        width: 100%;
+        height: 150px;
+        font-family: "Courier New", monospace;
+        margin-top: 10px;
+        padding: 10px;
+        border: 1px solid #ced4da;
+        border-radius: 4px;
+      }
+      .btn-import {
+        background-color: #17a2b8;
+        color: white;
+        border: none;
+        padding: 8px 16px;
+        border-radius: 4px;
+        cursor: pointer;
+        margin-bottom: 10px;
+      }
+      .btn-import:hover {
+        background-color: #138496;
+      }
+
+      .hidden {
+        display: none;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>FPGA MIPS 指令管理與生成器</h1>
+
+      <div class="generator-box">
+        <h3>新增指令 (New Instruction)</h3>
+        <div class="control-group">
+          <select id="instr-select" onchange="updateUI()">
+            <option value="add">add</option>
+            <option value="sub">sub</option>
+            <option value="and">and</option>
+            <option value="or">or</option>
+            <option value="slt">slt</option>
+            <option value="addi">addi</option>
+            <option value="lw">lw</option>
+            <option value="sw">sw</option>
+            <option value="beq">beq</option>
+            <option value="j">j</option>
+          </select>
+
+          <span id="rd-group"
+            ><label>rd:</label
+            ><select id="rd-select" class="reg-select"></select
+          ></span>
+          <span id="rs-group"
+            ><label>rs:</label
+            ><select id="rs-select" class="reg-select"></select
+          ></span>
+          <span id="rt-group"
+            ><label>rt:</label
+            ><select id="rt-select" class="reg-select"></select
+          ></span>
+
+          <span id="imm-group" class="hidden">
+            <input
+              type="number"
+              id="imm-input"
+              placeholder="Imm (16-bit)"
+              style="width: 100px"
+            />
+          </span>
+          <span id="addr-group" class="hidden">
+            <input
+              type="number"
+              id="addr-input"
+              placeholder="Target Index"
+              style="width: 100px"
+            />
+          </span>
+
+          <button class="btn-add" onclick="generateAndAdd()">+ 加入列表</button>
+        </div>
+      </div>
+
+      <h3>指令列表 (Instruction List)</h3>
+      <p style="font-size: 0.9em; color: #666">
+        * 提示：直接修改 "32-bit Machine Code" 欄位，右側解析會自動更新。
+      </p>
+      <table id="instr-table">
+        <thead>
+          <tr>
+            <th style="width: 50px">Del</th>
+            <th>32-bit Machine Code (Editable)</th>
+            <th>Assembly (預覽)</th>
+            <th>Opcode</th>
+            <th>rs</th>
+            <th>rt</th>
+            <th>rd</th>
+            <th>Shamt/Imm</th>
+            <th>Funct</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+
+      <div class="export-box">
+        <h3>完整代碼 (mem.txt 格式)</h3>
+        <button class="btn-import" onclick="importFromText()">
+          ↑ 從下方文字框反向匯入 (Import)
+        </button>
+        <textarea
+          id="export-area"
+          placeholder="在此處貼上 mem.txt 的內容，點擊上方按鈕即可還原到表格中..."
+        ></textarea>
+      </div>
+    </div>
+
+    <script>
+      // --- 定義與資料 ---
+      const registers = [
+        "$zero",
+        "$at",
+        "$v0",
+        "$v1",
+        "$a0",
+        "$a1",
+        "$a2",
+        "$a3",
+        "$t0",
+        "$t1",
+        "$t2",
+        "$t3",
+        "$t4",
+        "$t5",
+        "$t6",
+        "$t7",
+        "$s0",
+        "$s1",
+        "$s2",
+        "$s3",
+        "$s4",
+        "$s5",
+        "$s6",
+        "$s7",
+        "$t8",
+        "$t9",
+        "$k0",
+        "$k1",
+        "$gp",
+        "$sp",
+        "$fp",
+        "$ra",
+      ];
+
+      const instrConfig = {
+        add: { type: "R", op: 0, funct: 32 },
+        sub: { type: "R", op: 0, funct: 34 },
+        and: { type: "R", op: 0, funct: 36 },
+        or: { type: "R", op: 0, funct: 37 },
+        slt: { type: "R", op: 0, funct: 42 },
+        addi: { type: "I", op: 8 },
+        lw: { type: "I", op: 35 },
+        sw: { type: "I", op: 43 },
+        beq: { type: "I", op: 4 },
+        j: { type: "J", op: 2 },
+      };
+
+      // 反向查找表 (用於解析)
+      const opcodeMap = {};
+      const functMap = {};
+      for (let key in instrConfig) {
+        let cmd = instrConfig[key];
+        opcodeMap[cmd.op] = key; // Simple map
+        if (cmd.type === "R") {
+          functMap[cmd.funct] = key;
+        }
+      }
+
+      // --- 初始化 UI ---
+      function init() {
+        const selects = document.querySelectorAll(".reg-select");
+        selects.forEach((sel) => {
+          registers.forEach((reg, index) => {
+            let opt = document.createElement("option");
+            opt.value = index;
+            opt.text = `${reg} (${index})`;
+            if (index === 0) opt.selected = true;
+            sel.add(opt);
+          });
+        });
+        // 預設選取方便測試
+        document.getElementById("rs-select").value = 8; // t0
+        document.getElementById("rt-select").value = 9; // t1
+        document.getElementById("rd-select").value = 10; // t2
+        updateUI();
+      }
+
+      function updateUI() {
+        const instr = document.getElementById("instr-select").value;
+        const type = instrConfig[instr].type;
+
+        document.getElementById("rd-group").style.display =
+          type === "R" ? "inline" : "none";
+        document.getElementById("rs-group").style.display =
+          type === "J" ? "none" : "inline";
+        document.getElementById("rt-group").style.display =
+          type === "J" ? "none" : "inline";
+        document.getElementById("imm-group").style.display =
+          type === "I" ? "inline" : "none";
+        document.getElementById("addr-group").style.display =
+          type === "J" ? "inline" : "none";
+
+        // 標籤微調
+        const labels = {
+          lw: { rt: "rt(Dst)", rs: "rs(Base)", imm: "Offset" },
+          sw: { rt: "rt(Src)", rs: "rs(Base)", imm: "Offset" },
+          beq: { rt: "rt", rs: "rs", imm: "Offset" },
+          addi: { rt: "rt(Dst)", rs: "rs(Src)", imm: "Imm" },
+        };
+
+        if (type === "I" && labels[instr]) {
+          document.querySelector("#rt-group label").innerText =
+            labels[instr].rt + ":";
+          document.querySelector("#rs-group label").innerText =
+            labels[instr].rs + ":";
+        } else {
+          document.querySelector("#rt-group label").innerText = "rt:";
+          document.querySelector("#rs-group label").innerText = "rs:";
+        }
+      }
+
+      // --- 核心功能：生成二進制碼 ---
+      function toBin(num, bits) {
+        let n = parseInt(num);
+        if (isNaN(n)) n = 0;
+        if (n < 0) n = (1 << bits) + n;
+        let s = n.toString(2);
+        while (s.length < bits) s = "0" + s;
+        return s.slice(-bits);
+      }
+
+      function generateAndAdd() {
+        const instrName = document.getElementById("instr-select").value;
+        const cfg = instrConfig[instrName];
+
+        let opcode = toBin(cfg.op, 6);
+        let rs = toBin(document.getElementById("rs-select").value, 5);
+        let rt = toBin(document.getElementById("rt-select").value, 5);
+        let rd = toBin(document.getElementById("rd-select").value, 5);
+        let shamt = "00000";
+        let funct = cfg.funct ? toBin(cfg.funct, 6) : "000000";
+        let imm = toBin(document.getElementById("imm-input").value, 16);
+        let addr = toBin(document.getElementById("addr-input").value, 26);
+
+        let binary = "";
+        if (cfg.type === "R") binary = opcode + rs + rt + rd + shamt + funct;
+        else if (cfg.type === "I") binary = opcode + rs + rt + imm;
+        else if (cfg.type === "J") binary = opcode + addr;
+
+        addTableRow(binary);
+        updateExportArea();
+      }
+
+      // --- 核心功能：表格操作與解析 ---
+      function addTableRow(binaryCode) {
+        const tbody = document.querySelector("#instr-table tbody");
+        const tr = document.createElement("tr");
+
+        tr.innerHTML = `
+            <td><button class="btn-del" onclick="deleteRow(this)">X</button></td>
+            <td><input type="text" class="code-input" value="${binaryCode}" maxlength="32" oninput="parseAndUpdate(this)"></td>
+            <td class="col-asm"></td>
+            <td class="col-field"></td> <td class="col-field"></td> <td class="col-field"></td> <td class="col-field"></td> <td class="col-field"></td> <td class="col-field"></td> `;
+        tbody.appendChild(tr);
+        parseAndUpdate(tr.querySelector("input")); // 立即解析一次
+      }
+
+      function deleteRow(btn) {
+        const row = btn.parentNode.parentNode;
+        row.parentNode.removeChild(row);
+        updateExportArea();
+      }
+
+      // --- 核心功能：解析二進制 (Parser) ---
+      function parseAndUpdate(input) {
+        const tr = input.parentNode.parentNode;
+        const bin = input.value.trim();
+        const cells = tr.querySelectorAll("td");
+
+        // 清空欄位
+        for (let i = 2; i <= 8; i++) cells[i].innerText = "-";
+
+        if (!/^[01]{32}$/.test(bin)) {
+          cells[2].innerText = "Invalid 32-bit";
+          cells[2].style.color = "red";
+          return; // 格式不對
+        }
+        cells[2].style.color = "#0056b3";
+
+        // 切割欄位
+        const opBin = bin.slice(0, 6);
+        const rsBin = bin.slice(6, 11);
+        const rtBin = bin.slice(11, 16);
+        const rdBin = bin.slice(16, 21);
+        const shamtBin = bin.slice(21, 26);
+        const functBin = bin.slice(26, 32);
+        const immBin = bin.slice(16, 32);
+        const addrBin = bin.slice(6, 32);
+
+        const opVal = parseInt(opBin, 2);
+
+        // 填入基礎顯示
+        cells[3].innerText = `${opVal} (0x${parseInt(opBin, 2).toString(16)})`;
+
+        // 邏輯判斷
+        let asm = "";
+
+        if (opVal === 0) {
+          // R-Type
+          const functVal = parseInt(functBin, 2);
+          const instrName = functMap[functVal] || "???";
+          const rs = parseInt(rsBin, 2);
+          const rt = parseInt(rtBin, 2);
+          const rd = parseInt(rdBin, 2);
+
+          cells[4].innerText = `r${rs} (${registers[rs]})`;
+          cells[5].innerText = `r${rt} (${registers[rt]})`;
+          cells[6].innerText = `r${rd} (${registers[rd]})`;
+          cells[7].innerText = `shamt: ${parseInt(shamtBin, 2)}`;
+          cells[8].innerText = `${functVal} (0x${functVal.toString(16)})`;
+
+          asm = `${instrName} ${registers[rd]}, ${registers[rs]}, ${registers[rt]}`;
+        } else if (opVal === 2 || opVal === 3) {
+          // J-Type (Assuming 2 is J)
+          const instrName = opVal === 2 ? "j" : "jal";
+          const addrVal = parseInt(addrBin, 2);
+          cells[7].innerText = `Idx: ${addrVal}`;
+          asm = `${instrName} ${addrVal}`;
+        } else {
+          // I-Type
+          const instrName =
+            Object.keys(instrConfig).find((k) => instrConfig[k].op === opVal) ||
+            "I-Type";
+          const rs = parseInt(rsBin, 2);
+          const rt = parseInt(rtBin, 2);
+
+          // 處理 Signed Immediate
+          let immVal = parseInt(immBin, 2);
+          if (immBin[0] === "1") immVal = immVal - 65536;
+
+          cells[4].innerText = `r${rs} (${registers[rs]})`;
+          cells[5].innerText = `r${rt} (${registers[rt]})`;
+          cells[7].innerText = `${immVal}`;
+
+          if (instrName === "lw" || instrName === "sw") {
+            asm = `${instrName} ${registers[rt]}, ${immVal}(${registers[rs]})`;
+          } else if (instrName === "beq") {
+            asm = `${instrName} ${registers[rs]}, ${registers[rt]}, ${immVal}`;
+          } else {
+            asm = `${instrName} ${registers[rt]}, ${registers[rs]}, ${immVal}`;
+          }
+        }
+
+        cells[2].innerText = asm;
+        updateExportArea();
+      }
+
+      // --- 匯出與匯入 ---
+      function updateExportArea() {
+        const inputs = document.querySelectorAll(".code-input");
+        let text = "";
+        inputs.forEach((inp) => {
+          text += inp.value.trim() + "\n";
+        });
+        document.getElementById("export-area").value = text;
+      }
+
+      function importFromText() {
+        const text = document.getElementById("export-area").value;
+        const lines = text.split("\n");
+
+        // 清空表格
+        document.querySelector("#instr-table tbody").innerHTML = "";
+
+        lines.forEach((line) => {
+          const cleanLine = line.trim();
+          if (cleanLine.length === 32 && /^[01]+$/.test(cleanLine)) {
+            addTableRow(cleanLine);
+          }
+        });
+      }
+
+      init();
+    </script>
+  </body>
+</html>

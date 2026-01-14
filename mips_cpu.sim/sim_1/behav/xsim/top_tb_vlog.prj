@@ -1,0 +1,21 @@
+# compile verilog/system verilog design source files
+verilog xil_defaultlib  --include "../../../../../../2025.2/Vivado/data/rsb/busdef" \
+"../../../../mips_cpu.srcs/sources_1/new/ALU.v" \
+"../../../../mips_cpu.srcs/sources_1/new/ALU_Control.v" \
+"../../../../mips_cpu.srcs/sources_1/new/Add.v" \
+"../../../../mips_cpu.srcs/sources_1/new/Branch_And.v" \
+"../../../../mips_cpu.srcs/sources_1/new/Control_Unit.v" \
+"../../../../mips_cpu.srcs/sources_1/new/Data_Memory.v" \
+"../../../../mips_cpu.srcs/sources_1/new/Instruction_Memory.v" \
+"../../../../mips_cpu.srcs/sources_1/new/Mux.v" \
+"../../../../mips_cpu.srcs/sources_1/new/PC.v" \
+"../../../../mips_cpu.srcs/sources_1/new/RegFile.v" \
+"../../../../mips_cpu.srcs/sources_1/new/Sign_Extend.v" \
+"../../../../mips_cpu.srcs/sources_1/new/top.v" \
+"../../../../mips_cpu.srcs/sim_1/new/top_tb.v" \
+
+# compile glbl module
+verilog xil_defaultlib "glbl.v"
+
+# Do not sort compile order
+nosort
