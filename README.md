@@ -53,17 +53,16 @@
     <li><a href="#usage">Usage</a></li>
     <li><a href="#Top">Top Level (top.v)</a></li>
     <li><a href="#Program_Counter">Program Counter(PC.v)</a></li>
-    <li><a href="#">Instruction_Memory (Instruction_Memory.v)</a></li>
-    <li><a href="#">RegFile (RegFile.v)</a></li>
-    <li><a href="#">Sign_Extend (Sign_Extend.v)</a></li>
-    <li><a href="#">Control_Unit (Control_Unit.v)</a></li>
-    <li><a href="#">ALU (ALU.v)</a></li>
-    <li><a href="#">ALU_Control (ALU_Control.v)</a></li>
-    <li><a href="#">Data_Memory (Data_Memory.v)</a></li>
-    <li><a href="#">Mux (Mux.v)</a></li>
-    <li><a href="#">Add (Add.v)</a></li>
-    <li><a href="#">Branch_And (Branch_And.v)</a></li>
-    <li><a href="#roadmap">Roadmap</a></li>
+    <li><a href="#Instruction_Memory">Instruction_Memory (Instruction_Memory.v)</a></li>
+    <li><a href="#RegFile">RegFile (RegFile.v)</a></li>
+    <li><a href="#Sign_Extend">Sign_Extend (Sign_Extend.v)</a></li>
+    <li><a href="#Control_Unit">Control_Unit (Control_Unit.v)</a></li>
+    <li><a href="#ALU">ALU (ALU.v)</a></li>
+    <li><a href="#ALU_Control">ALU_Control (ALU_Control.v)</a></li>
+    <li><a href="#Data_Memory">Data_Memory (Data_Memory.v)</a></li>
+    <li><a href="#Mux">Mux (Mux.v)</a></li>
+    <li><a href="#Add">Add (Add.v)</a></li>
+    <li><a href="#Branch_And">Branch_And (Branch_And.v)</a></li>
     <li><a href="#contributing">Contributing</a></li>
     <li><a href="#license">License</a></li>
     <li><a href="#contact">Contact</a></li>
@@ -115,7 +114,7 @@ endmodule
 ```
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
-## Instruction_Memory (Instruction_Memory.v)
+## Instruction_Memory
 Instruction Memory 模塊模擬了唯讀記憶體（ROM），用於儲存程式碼。它在模擬開始時會從 instr_mem.txt 檔案載入機械碼。其運作方式為「非同步讀取」，接收來自 PC 的 32 位元位址輸入後，忽略最低 2 位元（Word Alignment），直接輸出對應位址的 32 位元指令資料，供後續解碼階段使用。
 
 ```verilog
@@ -130,7 +129,7 @@ endmodule
 ```
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
-## RegFile (RegFile.v)
+## RegFile
 RegFile 模塊實現了 MIPS 架構下的 32 個通用暫存器（Register File）。它支援「雙讀單寫」架構：擁有兩個非同步讀取埠，能同時輸出 rs 與 rt 的數值；以及一個同步寫入埠，在時脈上升緣（Positive Edge）且 RegWrite 訊號致能時將資料寫入指定暫存器。此外，模塊內建了硬體保護邏輯，確保 0 號暫存器（$zero）永遠保持為 0，無法被寫入修改。
 
 ```verilog
@@ -160,7 +159,7 @@ endmodule
 ```
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
-## Sign_Extend (Sign_Extend.v)
+## Sign_Extend
 Sign_Extend 模塊負責處理立即數（Immediate）的符號擴展。在執行 I-type 指令（如 addi, lw, beq）時，它將指令中的 16 位元立即數擴展為 32 位元，以符合 ALU 的輸入格式。其運作邏輯是複製 16 位元輸入的最高位（Sign Bit）填滿高 16 位元，確保數值在擴展後保持正負號不變。
 
 ```verilog
@@ -175,7 +174,7 @@ endmodule
 ```
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
-## Control_Unit (Control_Unit.v)
+## Control_Unit
 Control Unit 是處理器的決策中心，負責指令解碼。它接收指令的 OpCode（高 6 位元），並透過組合邏輯產生所有對應的控制訊號（如 RegDst, ALUOp, MemRead, Branch, Jump 等）。這些訊號指揮資料路徑中的多工器切換方向、記憶體的讀寫權限以及 ALU 的運算類型，確保處理器能正確區分並執行 R-type, lw, sw, beq, j 等不同指令。
 ```verilog
 module Control_Unit (
@@ -205,7 +204,7 @@ endmodule
 ```
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
-## ALU (ALU.v)
+## ALU
 ALU（算術邏輯單元）是處理器的運算核心。它根據輸入的 4 位元 ALUControl 訊號，對兩個 32 位元運算元（SrcA, SrcB）執行加法、減法、邏輯 AND/OR/NOR 或小於比較（SLT）等運算。運算結果透過 ALUResult 輸出，同時會產生一個 Zero 旗標訊號（當結果為 0 時置 1），該旗標專門用於分支指令（beq）的條件判斷。
 ```verilog
 module ALU (
@@ -225,7 +224,7 @@ endmodule
 ```
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
-## ALU_Control (ALU_Control.v)
+## ALU_Control
 ALU_Control 模塊是一個二級解碼器，用於輔助 Control Unit 生成精確的 ALU 控制碼。它接收來自 Control Unit 的 ALUOp 類別訊號以及指令的 Funct 欄位（針對 R-type 指令）。透過這兩層解碼，它能區分出同樣屬於 R-type 的 add, sub, and, slt 等指令，輸出對應的 4 位元控制碼給 ALU 執行正確動作。
 ```verilog
 module ALU_Control (
@@ -241,7 +240,7 @@ endmodule
 ```
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
-## Data_Memory (Data_Memory.v)
+## Data_Memory
 Data Memory 模塊模擬了系統的資料隨機存取記憶體（RAM）。它具備同步寫入與非同步讀取的特性：當 MemWrite 為真時，於時脈上升緣將資料寫入記憶體；當 MemRead 為真時，則即時輸出指定位址的資料。它同樣使用 Word Alignment（忽略位址低 2 位）的方式進行定址，並支援從 data_mem.txt 初始化記憶體內容。
 ```verilog
 module Data_Memory (
@@ -263,7 +262,7 @@ endmodule
 ```
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
-## Mux (Mux.v)
+## Mux
 Mux（多工器）是資料路徑中的關鍵路由元件。它是一個參數化設計的模塊（可設定位元寬度），根據 1 位元的選擇訊號（sel），在兩個輸入來源（in_0, in_1）之間擇一輸出。在 CPU 中，它被廣泛用於選擇 ALU 的運算元來源（暫存器或立即數）、寫回暫存器的資料來源（ALU 結果或記憶體資料），以及下一個 PC 的位址來源（順序執行或跳轉）。
 ```verilog
 module Mux
@@ -285,7 +284,7 @@ endmodule
 ```
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
-## Add (Add.v)
+## Add
 Add 模塊是一個單純的加法器，用於計算位址。它不涉及複雜的控制邏輯，僅執行輸入 A 加輸入 B 的動作。在單週期架構中，它主要被用來計算下一個指令的位址（PC + 4）以及分支指令的目標位址（PC + 4 + Offset）。
 ```verilog
 module Add (
@@ -304,7 +303,7 @@ endmodule
 ```
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
-## Branch_And (Branch_And.v)
+## Branch_And
 Branch_And 模塊是一個簡單的邏輯閘單元，用於決定是否執行條件分支（Branch）。它對 Branch 控制訊號（表示當前是分支指令）與 ALU 的 Zero 旗標（表示條件成立）進行及（AND）運算。當兩者皆為真時，輸出高電位以切換 PC 來源的多工器，實現程式跳轉。
 ```verilog
 module Branch_And (
@@ -348,8 +347,7 @@ Don't forget to give the project a star! Thanks again!
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
 ## License
-
-Distributed under the project_license. See `LICENSE.txt` for more information.
+Distributed is under the terms of Apache License (Version 2.0).
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 <!-- CONTACT -->
